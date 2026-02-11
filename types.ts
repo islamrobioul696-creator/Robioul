@@ -13,10 +13,26 @@ export interface PrayerHistory {
   [date: string]: PrayerRecord;
 }
 
+export interface RelapseRecord {
+  date: string; // ISO String
+  reason: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  text: string;
+  sender: 'user' | 'ai';
+  timestamp: number;
+}
+
 export interface AppSettings {
   language: 'EN' | 'BN';
   notificationsEnabled: boolean;
   hourlyMotivation: boolean;
+  isPrivacyLockEnabled: boolean;
+  privacyPin: string; // Simple 4 digit pin
+  recoveryQuestion: string; // e.g. "What is your favorite color?"
+  recoveryAnswer: string;
   prayerTimes: {
     Fajr: string;
     Dhuhr: string;
@@ -42,4 +58,4 @@ export interface ContentItem {
   createdAt: number;
 }
 
-export type ViewState = 'dashboard' | 'tracker' | 'settings';
+export type ViewState = 'dashboard' | 'tracker' | 'settings' | 'chat';

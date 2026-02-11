@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, CheckCircle2, Circle } from 'lucide-react';
 import { PrayerHistory, PrayerName, Quote } from '../types';
-import { THEME, PRAYER_NAMES, TRANSLATIONS } from '../constants';
+import { THEME, PRAYER_NAMES, TRANSLATIONS, RELAPSE_REASONS } from '../constants';
 
 interface DashboardProps {
   sobrietyStartDate: Date;
-  onResetSobriety: () => void;
+  onResetSobriety: (reason: string) => void;
   prayerHistory: PrayerHistory;
   onTogglePrayer: (prayer: PrayerName) => void;
   dailyQuote: Quote;
@@ -22,8 +22,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [timeElapsed, setTimeElapsed] = useState({ days: 0, hours: 0, minutes: 0 });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+
   const t = TRANSLATIONS[language];
   const fontClass = language === 'BN' ? 'font-bengali' : 'font-sans';
+
+  // Dynamic Date Update Loop
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 60000); // Check every minute
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const calculateTime = () => {
@@ -43,11 +54,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
 
     calculateTime();
-    const interval = setInterval(calculateTime, 60000); // Update every minute
+    const interval = setInterval(calculateTime, 1000); // Update every second for better feel
     return () => clearInterval(interval);
   }, [sobrietyStartDate]);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const handleResetConfirm = () => {
+    if (selectedReason) {
+      onResetSobriety(selectedReason);
+      setShowResetConfirm(false);
+      setSelectedReason(null);
+    }
+  };
+
+  const todayStr = currentDate.toISOString().split('T')[0];
   const todayRecord = prayerHistory[todayStr] || { Fajr: false, Dhuhr: false, Asr: false, Maghrib: false, Isha: false };
 
   return (
@@ -60,7 +79,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Sobriety Counter */}
-      <div className="bg-[#0F5132] text-white p-8 rounded-3xl shadow-lg relative overflow-hidden">
+      <div className="bg-[#0F5132] text-white p-8 rounded-3xl shadow-lg relative overflow-hidden transition-all duration-300">
         <div className="relative z-10 text-center">
           <h2 className="text-sm font-medium opacity-80 uppercase tracking-widest mb-4">{t.cleanTime}</h2>
           <div className="flex justify-center items-end gap-2 mb-6">
@@ -88,20 +107,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <RefreshCw size={14} /> {t.resetStreak}
             </button>
           ) : (
-            <div className="bg-white/10 p-4 rounded-xl animate-in zoom-in duration-200">
-              <p className="text-sm mb-3">{t.resetConfirm}</p>
-              <div className="flex justify-center gap-3">
+            <div className="bg-white rounded-2xl p-4 text-gray-800 animate-in zoom-in duration-200">
+              <p className="font-bold text-center mb-1">{t.resetConfirm}</p>
+              <p className="text-xs text-gray-500 text-center mb-3">{t.selectReason}</p>
+              
+              <div className="flex flex-wrap gap-2 justify-center mb-4">
+                {RELAPSE_REASONS.map(reason => (
+                  <button
+                    key={reason}
+                    onClick={() => setSelectedReason(reason)}
+                    className={`text-xs px-2 py-1 rounded-full border ${selectedReason === reason ? 'bg-[#0F5132] text-white border-[#0F5132]' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-center gap-2">
                 <button 
-                  onClick={() => setShowResetConfirm(false)}
-                  className="px-4 py-2 bg-white/20 rounded-lg text-sm hover:bg-white/30"
+                  onClick={() => { setShowResetConfirm(false); setSelectedReason(null); }}
+                  className="px-3 py-1 bg-gray-200 rounded-lg text-xs font-medium text-gray-600"
                 >
                   {t.cancel}
                 </button>
                 <button 
-                  onClick={() => { onResetSobriety(); setShowResetConfirm(false); }}
-                  className="px-4 py-2 bg-[#D32F2F] rounded-lg text-sm hover:bg-red-700"
+                  onClick={handleResetConfirm}
+                  disabled={!selectedReason}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium text-white ${selectedReason ? 'bg-[#D32F2F] hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
-                  {t.reset}
+                  {t.confirmReset}
                 </button>
               </div>
             </div>

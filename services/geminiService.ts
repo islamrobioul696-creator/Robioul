@@ -1,15 +1,51 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { ContentItem } from "../types";
+import { ContentItem, ChatMessage } from "../types";
+import { CHAT_PERSONA } from "../constants";
 
-// Initialize Gemini Client
+// Initialize Gemini Client strictly using environment variable
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+export const getCounselorResponse = async (
+  message: string, 
+  history: ChatMessage[], 
+  language: 'EN' | 'BN'
+): Promise<string> => {
+  try {
+    const model = 'gemini-3-flash-preview';
+    
+    // Convert our internal chat history to the format Gemini expects
+    const geminiHistory = history.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
+
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: [
+        ...geminiHistory,
+        { role: 'user', parts: [{ text: message }] }
+      ],
+      config: {
+        systemInstruction: CHAT_PERSONA(language),
+        temperature: 0.7,
+        topP: 0.95,
+      },
+    });
+
+    return response.text || "I am here to support you. Please tell me more.";
+  } catch (error) {
+    console.error("Gemini Chat Error:", error);
+    return language === 'BN' 
+      ? "দুঃখিত, আমি এই মুহূর্তে উত্তর দিতে পারছি না। অনুগ্রহ করে পরে চেষ্টা করুন।" 
+      : "I'm sorry, I cannot respond at the moment. Please try again later.";
+  }
+};
 
 export const fetchAndRefillBuffer = async (count: number, language: 'EN' | 'BN'): Promise<Omit<ContentItem, 'id' | 'isShown' | 'createdAt'>[]> => {
   try {
     const model = 'gemini-3-flash-preview';
     const langLabel = language === 'BN' ? 'Bengali' : 'English';
     
-    // Constructing the prompt as per System Architecture requirements
     const prompt = `Generate ${count} unique Islamic motivational quotes/Hadiths in ${langLabel} with references. Return strictly as a JSON list. 
     Ensure a mix of: 
     - Motivation for Salah (Prayer)
@@ -51,7 +87,7 @@ export const fetchAndRefillBuffer = async (count: number, language: 'EN' | 'BN')
       const data = JSON.parse(response.text);
       return data.map((item: any) => ({
         ...item,
-        language: language // Tag with current language code
+        language: language
       }));
     }
     

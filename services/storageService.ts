@@ -1,4 +1,4 @@
-import { PrayerHistory, AppSettings, ContentItem } from '../types';
+import { PrayerHistory, AppSettings, ContentItem, RelapseRecord, ChatMessage } from '../types';
 import { INITIAL_SETTINGS, QUOTES } from '../constants';
 
 const KEYS = {
@@ -6,10 +6,12 @@ const KEYS = {
   PRAYER_HISTORY: 'tc_prayer_history',
   SETTINGS: 'tc_settings',
   CONTENT_BUFFER: 'tc_content_buffer',
-  DAILY_QUOTE_MAP: 'tc_daily_quote_map', // Maps date+lang to contentId
+  DAILY_QUOTE_MAP: 'tc_daily_quote_map',
+  RELAPSE_HISTORY: 'tc_relapse_history',
+  CHAT_HISTORY: 'tc_chat_history',
 };
 
-// --- General Persistence ---
+// --- Sobriety & Prayer ---
 
 export const getSobrietyStartDate = (): Date => {
   const saved = localStorage.getItem(KEYS.SOBRIETY_START);
@@ -19,6 +21,40 @@ export const getSobrietyStartDate = (): Date => {
 export const setSobrietyStartDate = (date: Date) => {
   localStorage.setItem(KEYS.SOBRIETY_START, date.toISOString());
 };
+
+export const getRelapseHistory = (): RelapseRecord[] => {
+  const saved = localStorage.getItem(KEYS.RELAPSE_HISTORY);
+  return saved ? JSON.parse(saved) : [];
+};
+
+export const addRelapseRecord = (reason: string) => {
+  const history = getRelapseHistory();
+  const record: RelapseRecord = {
+    date: new Date().toISOString(),
+    reason: reason
+  };
+  localStorage.setItem(KEYS.RELAPSE_HISTORY, JSON.stringify([...history, record]));
+};
+
+// --- Chat History ---
+
+export const getChatHistory = (): ChatMessage[] => {
+  const saved = localStorage.getItem(KEYS.CHAT_HISTORY);
+  return saved ? JSON.parse(saved) : [];
+};
+
+export const saveChatMessage = (message: ChatMessage) => {
+  const history = getChatHistory();
+  // Keep last 50 messages for context efficiency
+  const updatedHistory = [...history, message].slice(-50);
+  localStorage.setItem(KEYS.CHAT_HISTORY, JSON.stringify(updatedHistory));
+};
+
+export const clearChatHistory = () => {
+  localStorage.removeItem(KEYS.CHAT_HISTORY);
+};
+
+// --- Settings & Prayers ---
 
 export const getPrayerHistory = (): PrayerHistory => {
   const saved = localStorage.getItem(KEYS.PRAYER_HISTORY);
@@ -41,7 +77,7 @@ export const saveSettings = (settings: AppSettings) => {
   localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
 };
 
-// --- Content Buffer (Local DB Logic) ---
+// --- Content Buffer ---
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -85,14 +121,6 @@ export const consumeNextUnseen = (language: 'EN' | 'BN'): ContentItem | null => 
   return item;
 };
 
-export const markAsShown = (id: string) => {
-  const buffer = getContentBuffer();
-  const updated = buffer.map(item => item.id === id ? { ...item, isShown: true } : item);
-  saveContentBuffer(updated);
-};
-
-// --- Dashboard Logic (Daily Wisdom Box) ---
-
 export const getOrSelectDailyWisdom = (language: 'EN' | 'BN'): ContentItem | null => {
   const todayStr = new Date().toISOString().split('T')[0];
   const mapKey = `${todayStr}_${language}`;
@@ -104,7 +132,6 @@ export const getOrSelectDailyWisdom = (language: 'EN' | 'BN'): ContentItem | nul
     return buffer.find(i => i.id === map[mapKey]) || null;
   }
 
-  // Pick new
   const next = consumeNextUnseen(language);
   if (next) {
     map[mapKey] = next.id;
