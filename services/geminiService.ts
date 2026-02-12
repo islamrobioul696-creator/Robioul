@@ -3,7 +3,7 @@ import { ContentItem, ChatMessage } from "../types";
 import { CHAT_PERSONA } from "../constants";
 
 // Initialize Gemini Client strictly using environment variable
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'FAKE_API_KEY_FOR_DEVELOPMENT' });
 
 export const getCounselorResponse = async (
   message: string, 
@@ -36,7 +36,7 @@ export const getCounselorResponse = async (
   } catch (error) {
     console.error("Gemini Chat Error:", error);
     return language === 'BN' 
-      ? "দুঃখিত, আমি এই মুহূর্তে উত্তর দিতে পারছি না। অনুগ্রহ করে পরে চেষ্টা করুন।" 
+      ? "à¦¦à§à¦à¦à¦¿à¦¤, à¦à¦®à¦¿ à¦à¦ à¦®à§à¦¹à§à¦°à§à¦¤à§ à¦à¦¤à§à¦¤à¦° à¦¦à¦¿à¦¤à§ à¦ªà¦¾à¦°à¦à¦¿ à¦¨à¦¾à¥¤ à¦à¦¨à§à¦à§à¦°à¦¹ à¦à¦°à§ à¦ªà¦°à§ à¦à§à¦·à§à¦à¦¾ à¦à¦°à§à¦¨à¥¤" 
       : "I'm sorry, I cannot respond at the moment. Please try again later.";
   }
 };
